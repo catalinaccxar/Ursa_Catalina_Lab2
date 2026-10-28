@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Ursa_Catalina_Lab2.Models;
-using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Ursa_Catalina_Lab2.Pages.BookPages;
 
@@ -16,25 +17,78 @@ public class IndexModel : PageModel
     }
 
     public IList<Book> Book { get; set; } = default!;
-    [BindProperty(SupportsGet = true)]
-    public int? AuthorID { get; set; }
+    public BookData BookD { get; set; }
+    public int BookID { get; set; }
+    public int CategoryID { get; set; }
 
-    public SelectList Authors { get; set; } = default!;
+    public string TitleSort { get; set; }
+    public string AuthorSort { get; set; }
 
-    public async Task OnGetAsync()
+    public string CurrentFilter { get; set; }
+
+
+    public async Task OnGetAsync(int? id, int? categoryID, string sortOrder, string searchString)
     {
-        Authors = new SelectList(_context.Authors, "ID", "FullName");
+        BookD = new BookData();
 
-        var books = _context.Book
-            .Include(b => b.Publisher)
-            .Include(b => b.Author)
-            .AsQueryable();
+        TitleSort = String.IsNullOrEmpty(sortOrder) ? "title_desc" : "";
+        AuthorSort = sortOrder == "author" ? "author_desc" : "author";
 
-        if (AuthorID.HasValue)
+        CurrentFilter = searchString;
+
+        //se va include Author conform cu sarcina de la lab 2
+        BookD.Books = await _context.Book
+              .Include(b => b.Publisher)
+              .Include(b => b.Author)
+              .Include(b => b.BookCategories)
+              .ThenInclude(b => b.Category)
+              .AsNoTracking()
+              .OrderBy(b => b.Title)
+              .ToListAsync();
+
+        if (!String.IsNullOrEmpty(searchString))
         {
-            books = books.Where(b => b.AuthorID == AuthorID);
-        }
+  BookD.Books = BookD.Books.Where(s => s.Author.FirstName.Contains(searchString)
 
-        Book = await books.ToListAsync();
+                                   ||s.Author.LastName.Contains(searchString)
+                                   || s.Title.Contains(searchString));
+
+
+
+            if (id != null)
+            {
+                BookID = id.Value;
+                Book book = BookD.Books
+                .Where(i => i.ID == id.Value).Single();
+                BookD.Categories = book.BookCategories.Select(s => s.Category);
+            }
+
+            switch (sortOrder)
+            {
+                case "title_desc":
+                    BookD.Books = BookD.Books.OrderByDescending(s =>
+                   s.Title);
+                    break;
+                case "author_desc":
+                    BookD.Books = BookD.Books.OrderByDescending(s =>
+                   s.Author.FullName);
+                    break;
+                case "author":
+                    BookD.Books = BookD.Books.OrderBy(s =>
+                   s.Author.FullName);
+                    break;
+                default:
+                    BookD.Books = BookD.Books.OrderBy(s => s.Title);
+                    break;
+
+            }
+            //[BindProperty(SupportsGet = true)]
+            //public int? AuthorID { get; set; }
+
+            //public SelectList Authors { get; set; } = default!;
+
+
+        }
     }
 }
+  

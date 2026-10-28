@@ -44,11 +44,25 @@ public class DeleteModel : PageModel
             return NotFound();
         }
 
-        var publisher = await _context.Publisher.FindAsync(id);
+        var publisher = await _context.Publisher
+            .Include(p => p.Books)
+            .FirstOrDefaultAsync(p => p.ID == id);
+
         if (publisher != null)
         {
-            Publisher = publisher;
-            _context.Publisher.Remove(Publisher);
+
+            var bookIds = publisher.Books.Select(b => b.ID).ToList();
+            var authorIds = publisher.Books.Select(b => b.AuthorID).Distinct().ToList();
+
+            var authorsToDelete = await _context.Authors
+                .Where(a => authorIds.Contains(a.ID)
+                         && a.Books.All(b => bookIds.Contains(b.ID)))
+                .ToListAsync();
+
+            _context.Book.RemoveRange(publisher.Books);
+            _context.Authors.RemoveRange(authorsToDelete);
+            _context.Publisher.Remove(publisher);
+
             await _context.SaveChangesAsync();
         }
 

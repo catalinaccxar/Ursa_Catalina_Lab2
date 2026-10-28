@@ -1,4 +1,6 @@
-﻿namespace Ursa_Catalina_Lab2.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Ursa_Catalina_Lab2.Models
 {
     public class Authors
     {
@@ -6,8 +8,15 @@
         public string FirstName { get; set; }
         public string LastName { get; set; }
 
-        public ICollection<Book>? Books { get; set; }   // navigation property
+        [Display(Name = "Full Name")]
+        public string FullName
+        {
+            get
+            {
+                return FirstName + " " + LastName;
+            }
+        }
 
-        public string FullName => FirstName + " " + LastName;
+        public ICollection<Book>? Books { get; set; }   // navigation property
     }
 }
