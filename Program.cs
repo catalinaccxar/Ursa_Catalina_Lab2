@@ -1,11 +1,18 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Ursa_Catalina_Lab2.Data;
 var builder = WebApplication.CreateBuilder(args);
+
 var connectionString = builder.Configuration.GetConnectionString("Ursa_Catalina_Lab2Context") ?? throw new InvalidOperationException("Connection string 'Ursa_Catalina_Lab2Context' not found.");
 
-builder.Services.AddDbContext<Ursa_Catalina_Lab2Context>(options => options.UseSqlServer(connectionString));
 
-// Add services to the container.
 builder.Services.AddRazorPages();
+builder.Services.AddDbContext<Ursa_Catalina_Lab2Context>(options => options.UseSqlServer(connectionString));
+builder.Services.AddDbContext<LibraryIdentityContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("Ursa_Catalina_Lab2Context") ?? throw new InvalidOperationException("Connection string 'Ursa_Catalina_Lab2Context' not found.")));
+
+builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+    .AddEntityFrameworkStores<LibraryIdentityContext>();
+// Add services to the container.
 
 var app = builder.Build();
 
@@ -20,7 +27,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseRouting();
-
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();
