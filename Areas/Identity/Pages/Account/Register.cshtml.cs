@@ -120,8 +120,15 @@ public class RegisterModel : PageModel
     public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
     {
         returnUrl ??= Url.Content("~/");
-        ExternalLogins = (await
-       _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+        ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+
+        foreach (var e in ModelState.Where(x => x.Value.Errors.Count > 0))
+        {
+            System.Diagnostics.Debug.WriteLine($"EROARE la cheia: {e.Key}");
+        }
+
+        ModelState.Remove("Member.Email");
+
 
         var user = CreateUser();
 
@@ -136,23 +143,16 @@ public class RegisterModel : PageModel
         if (result.Succeeded)
         {
             _logger.LogInformation("User created a new account with password.");
+            var role = await _userManager.AddToRoleAsync(user, "User");
             var userId = await _userManager.GetUserIdAsync(user);
-            var code = await
-           _userManager.GenerateEmailConfirmationTokenAsync(user);
-            code =
-           WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-            var callbackUrl = Url.Page(
-            "/Account/ConfirmEmail",
-           pageHandler: null,
-           values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
-            protocol: Request.Scheme);
+            var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+            var callbackUrl = Url.Page("/Account/ConfirmEmail", pageHandler: null, values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl }, protocol: Request.Scheme);
 
-            await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
-                 $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+            await _emailSender.SendEmailAsync(Input.Email, "Confirm your email", $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
 
 
- if
-(_userManager.Options.SignIn.RequireConfirmedAccount)
+            if (_userManager.Options.SignIn.RequireConfirmedAccount)
             {
                 return RedirectToPage("RegisterConfirmation", new { email = Input.Email, returnUrl = returnUrl });
             }
@@ -161,10 +161,17 @@ public class RegisterModel : PageModel
                 await _signInManager.SignInAsync(user, isPersistent: false);
                 return LocalRedirect(returnUrl);
             }
+        }   // <- închide if (result.Succeeded)
 
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
         }
+
         return Page();
     }
+
+
 
     private ApplicationUser CreateUser()
     {

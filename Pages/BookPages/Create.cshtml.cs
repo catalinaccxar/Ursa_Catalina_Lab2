@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -5,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using Ursa_Catalina_Lab2.Models;
 
 namespace Ursa_Catalina_Lab2.Pages.BookPages;
+
+[Authorize(Roles = "Admin")]
 
 public class CreateModel : BookCategoriesPageModel
 {
